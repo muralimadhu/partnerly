@@ -16,7 +16,6 @@ class Game {
         nextCell: 0,
         currentWord: "",
         nextRow: 1,
-        solution: this.#newWord(),
         currentWordEl: []
     }
     constructor(rows, cols, boards) {
@@ -29,16 +28,25 @@ class Game {
         $(document).ready(function () {
             self.#createKeyboard()
             self.#createGame(self.rows, self.cols)
-        });
-        let solutionCache = {}
-        const solutionArr = this.gameState.solution.split("")
-        for (let i in solutionArr) {
-            if (!solutionCache[solutionArr[i]]) {
-                solutionCache[solutionArr[i]] = []
+            self.#newWord().then(function(res) {
+                return res.json()
+            })
+            .then(function(res){
+                self.gameState.solution = res.word
+                let solutionCache = {}
+                const solutionArr = self.gameState.solution.split("")
+                for (let i in solutionArr) {
+                    if (!solutionCache[solutionArr[i]]) {
+                        solutionCache[solutionArr[i]] = []
+                    }
+                solutionCache[solutionArr[i]].push(parseInt(i))
             }
-            solutionCache[solutionArr[i]].push(parseInt(i))
-        }
-        this.gameState.solutionCache = solutionCache
+            self.gameState.solutionCache = solutionCache
+            })
+            .catch(function(err) {
+                console.log(err)
+            })
+        });
     }
 
     #createKeyboard() {
@@ -135,9 +143,11 @@ class Game {
         $("#board").css("grid-template-columns", `repeat(${cols}, 1fr)`)
     }
 
-    #newWord() {
-        const options = ["hello", "fetch", "testy", "cynic", "space", "index", "notes", "leech"]
-        return options[Math.floor(Math.random() * options.length)];
+    async #newWord() {
+        return await fetch(`https://wordsapiv1.p.rapidapi.com/words/?random=true&lettersMin=${this.cols}&lettersMax=${this.cols}`, {
+            method: "GET",
+            headers: WORDS_API_SETTINGS.headers,
+        })
     }
 
     async #checkWord(word) {
@@ -156,10 +166,12 @@ class Game {
             self.#animateCSS(key, index + 1, "flipInY", self.#getCellColor(letter, index))
         })
         if (this.gameState.currentWord == this.gameState.solution) {
-            self.#animateCSS($(`#board`), 1, "bounce" )
+            self.#animateCSS($(`#board`), 1, "heartBeat" )
+            this.gameState.currentWordEl = []
         }
         else if (this.gameState.nextRow == this.rows) {
-
+            self.#animateCSS($(`#board`), 1, "headShake" )
+            this.gameState.currentWordEl = []
         }
         else {
             this.gameState.currentWord = ""
