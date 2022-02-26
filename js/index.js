@@ -3,14 +3,6 @@ const ROWS = 5
 const COLS = 5
 const DEL = "Del"
 const SUBMIT = "Enter"
-let WORDS_API_SETTINGS = {
-    "headers": {
-        "x-rapidapi-host": "wordsapiv1.p.rapidapi.com",
-        "x-rapidapi-key": "725cb746f2msh33a05b8a0e2b0a9p1f1885jsnf5129d11bf7c"
-    }
-}
-
-
 class Game {
     gameState = {
         nextCell: 0,
@@ -28,24 +20,16 @@ class Game {
         $(document).ready(function () {
             self.#createKeyboard()
             self.#createGame(self.rows, self.cols)
-            self.#newWord().then(function(res) {
-                return res.json()
-            })
-            .then(function(res){
-                self.gameState.solution = res.word
-                let solutionCache = {}
-                const solutionArr = self.gameState.solution.split("")
-                for (let i in solutionArr) {
-                    if (!solutionCache[solutionArr[i]]) {
-                        solutionCache[solutionArr[i]] = []
-                    }
+            self.gameState.solution = self.#newWord()
+            let solutionCache = {}
+            const solutionArr = self.gameState.solution.split("")
+            for (let i in solutionArr) {
+                if (!solutionCache[solutionArr[i]]) {
+                    solutionCache[solutionArr[i]] = []
+                }
                 solutionCache[solutionArr[i]].push(parseInt(i))
             }
             self.gameState.solutionCache = solutionCache
-            })
-            .catch(function(err) {
-                console.log(err)
-            })
         });
     }
 
@@ -67,7 +51,7 @@ class Game {
                 keyboardRow.append($("<div>", { class: "spacer-half" }))
             }
             if (row == 'r3') {
-                let button = $("<button>").attr("data-key", SUBMIT).attr("class", "wide-button").text(SUBMIT)
+                let button = $("<button>").attr("data-key", DEL).attr("class", "wide-button").text(DEL)
                 button.click(onClick)
                 keyboardRow.append(button)
             }
@@ -80,7 +64,7 @@ class Game {
                 keyboardRow.append($("<div>", { class: "spacer-half" }))
             }
             if (row == 'r3') {
-                let button = $("<button>").attr("data-key", DEL).attr("class", "wide-button").text(DEL)
+                let button = $("<button>").attr("data-key", SUBMIT).attr("class", "wide-button").text(SUBMIT)
                 button.click(onClick)
                 keyboardRow.append(button)
             }
@@ -89,24 +73,19 @@ class Game {
 
     #submitKey(key) {
         const self = this
-        const badWord = function() {
+        const badWord = function () {
             self.gameState.currentWordEl.forEach(function (cellId, index) {
                 self.#animateCSS($(`#${cellId}`), index, "bounce")
             })
         }
         if (key == SUBMIT) {
             if (this.gameState.currentWordEl.length == this.cols) {
-                this.#checkWord(this.gameState.currentWord).then(function(data) {
-                    if(data.ok) {
-                        self.#submitWord()
-                    }
-                    else {
-                        badWord()
-                    }
-                })
-                .catch(function(err) {
+                if(this.#checkWord(this.gameState.currentWord)) {
+                    self.#submitWord()
+                }
+                else {
                     badWord()
-                })
+                }
             }
         }
         else if (key == DEL) {
@@ -143,18 +122,12 @@ class Game {
         $("#board").css("grid-template-columns", `repeat(${cols}, 1fr)`)
     }
 
-    async #newWord() {
-        return await fetch(`https://wordsapiv1.p.rapidapi.com/words/?random=true&lettersMin=${this.cols}&lettersMax=${this.cols}`, {
-            method: "GET",
-            headers: WORDS_API_SETTINGS.headers,
-        })
+    #newWord() {
+        return Words[Math.floor(Math.random() * Words.length)];
     }
 
-    async #checkWord(word) {
-        return await fetch(`https://wordsapiv1.p.rapidapi.com/words/${word}`, {
-            method: "GET",
-            headers: WORDS_API_SETTINGS.headers,
-        })
+    #checkWord(word) {
+        return Words.includes(word) || Guesses.includes(word)
     }
 
     #submitWord() {
@@ -166,11 +139,11 @@ class Game {
             self.#animateCSS(key, index + 1, "flipInY", self.#getCellColor(letter, index))
         })
         if (this.gameState.currentWord == this.gameState.solution) {
-            self.#animateCSS($(`#board`), 1, "heartBeat" )
+            self.#animateCSS($(`#board`), 1, "heartBeat")
             this.gameState.currentWordEl = []
         }
         else if (this.gameState.nextRow == this.rows) {
-            self.#animateCSS($(`#board`), 1, "headShake" )
+            self.#animateCSS($(`#board`), 1, "headShake")
             this.gameState.currentWordEl = []
         }
         else {
